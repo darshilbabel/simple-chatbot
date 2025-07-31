@@ -175,4 +175,4 @@ gritworks/newrelic.ini
 .deepeval-cache.json
 
 gritworks/Makefile
-gritworks/init.sh
+gritworks/init.sh.env
