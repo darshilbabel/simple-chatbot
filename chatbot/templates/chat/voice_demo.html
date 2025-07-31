@@ -1,0 +1,181 @@
+{% extends 'base.html' %} {% block body %}
+
+<div class="flex px-6">
+  <div class="w-2/3 pr-6">
+    <div class="p-6 w-[800px]">
+      <h1 class="text-3xl tracking-tight font-light" id="chat-header">Welcome to Voicebot</h1>
+      <div id="chat-log" class="mt-4 w-full relative p-6 overflow-y-auto h-[30rem] bg-gray-50 border border-gray-200"></div>
+      <div class="mt-4 flex">
+        <button id="chat-message-submit" class="py-2 w-full border border-transparent text-sm font-medium rounded-md text-white bg-blue-800 hover:bg-blue-900" type="submit">Speak</button>
+      </div>
+    </div>
+  </div>
+  <div class="w-1/3 pl-6">
+    <div class="mb-4">
+      <h1 class="text-lg font-medium mb-2">Context</h1>
+      <textarea id="context-input" class="mt-4 w-full relative p-6 overflow-y-auto h-[30rem] bg-gray-50 border border-gray-200" placeholder="Write your context here"></textarea>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %} {% block scripts%}
+<script>
+  var wss_protocol = window.location.protocol == "https:" ? "wss://" : "ws://";
+  var chatSocket = new WebSocket(
+    wss_protocol + window.location.host + "/ws/chat/"
+  );
+  var messages = [];
+
+function speak(text, rate) {
+  console.log('In Speak function: '+text);
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = rate;
+  utterance.lang = "en-IN";
+  speechSynthesis.speak(utterance);
+
+}
+
+function cleanText(text) {
+  text = text.toLowerCase();
+  return text.replace(/[.,\/#!?$%\^&\*;:{}=\-_`~()]/g, '');
+}
+
+function getSentence(inputString) {
+  const firstPeriodIndex = inputString.indexOf('.');
+  if (firstPeriodIndex !== -1) {
+    const firstSubstring = inputString.slice(0, firstPeriodIndex + 1);
+    const remainingText = inputString.slice(firstPeriodIndex + 1);
+    return {
+      substring: firstSubstring,
+      remaining: remainingText
+    }
+  } else {
+    return {
+      substring: '',
+      remaining: inputString
+    }
+  }
+}
+
+function getSubstring(string) {
+  // Regular expression to match any special character
+  var regex = /[^\w\s]/g;
+
+  // Remove special character at the start of the string, if any
+  if (regex.test(string[0])) {
+    string = string.substring(1);
+  }
+
+  // Find the index of the last special character
+  var lastSpecialCharIndex = string.search(regex);
+
+  // Find the first five words
+  var words = string.trim().split(/\s+/);
+  var firstFiveWords = words.slice(0, 10).join(' ');
+
+  // Determine the substring based on the last special character or the first five words
+  var substring = '';
+  var remaining = '';
+
+  if (words.length <= 10) {
+    substring = '';
+    remaining = string;
+  } else if (lastSpecialCharIndex !== -1) {
+    substring = string.substring(0, lastSpecialCharIndex);
+    remaining = string.substring(lastSpecialCharIndex);
+  } else {
+    substring = firstFiveWords;
+    remaining = string.substring(substring.length);
+  }
+
+  return {
+    substring: substring.trim(),
+    remaining: remaining.trim()
+  };
+}
+
+var botToSpeak = '';
+var iter = 1;
+
+chatSocket.onmessage = function (e) {
+  console.log('Iteration:'+iter);
+  var data = JSON.parse(e.data);
+  var message = data["text"];
+  // Check if the message is from the user or the AI
+  if (message.source === "user") {
+    messages.push(message);
+  } else {
+    iter += 1;
+    // Append the AI message to the last user message
+    if(messages[messages.length - 1].source === "bot")
+    {
+      messages[messages.length - 1].msg += message.msg;
+      botToSpeak += message.msg;
+    }
+    else
+    {
+      messages.push(message);
+      botToSpeak += message.msg;
+    }
+
+    var result = getSentence(botToSpeak);
+    // console.log(botToSpeak, result.substring, result.remaining);
+    if(result.substring.length > 0 || message.finish_reason === 'stop')
+    {
+      console.log('Inside if');
+      if(message.finish_reason === 'stop')
+      {
+        speak(cleanText(botToSpeak), 0.8);
+        botToSpeak = '';
+      }
+      else
+      {
+        console.log('Bot needs to speak:'+result.substring);
+        console.log('Bot remaining to speak: '+result.remaining);
+        speak(cleanText(result.substring), 0.8);
+        botToSpeak = result.remaining;
+      }
+    }
+  }
+
+  var str = '<ul class="space-y-2">';
+
+  messages.forEach(function (msg) {
+    str += `<li class="flex ${
+      msg.source == "bot" ? "justify-start" : "justify-end"
+    }">
+    <div class="relative max-w-xl px-4 py-2 rounded-lg shadow-md
+      ${
+        msg.source == "bot"
+          ? "text-gray-700 bg-white border border-gray-200"
+          : "bg-blue-600 text-white"
+      }">
+      <span className="block font-normal">${msg.msg}</span></div></li>`;
+  });
+  str += "</ul>";
+  document.querySelector("#chat-log").innerHTML = str;
+};
+
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-IN'; // Set the language to English (United States)
+  recognition.continuous = false; // Set to false for single-sentence recognition
+  recognition.interimResults = false; // Set to false to get final results only
+
+  var messageFromVoice;
+  document.querySelector("#chat-message-submit").onclick = function (e) {
+    recognition.start();
+    recognition.onresult = function(event) {
+      const result = event.results[0][0].transcript;
+      messageFromVoice = result;
+      var context = document.querySelector("#context-input").value;
+      chatSocket.send(
+        JSON.stringify({
+          text: messageFromVoice,
+          context: context
+        })
+      );
+    };
+  };
+</script>
+{% endblock %}
