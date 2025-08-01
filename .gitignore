@@ -164,15 +164,7 @@ cython_debug/
 .idea/*
 cache/
 
-# Ignore logs folder
-gritworks/logs/*
-gritworks/assistant/utils/gmail/token.json
-gritworks/newrelic.ini
-
 # deepeval cache and credential files
 .deepeval
 .deepeval_telemetry.txt
 .deepeval-cache.json
-
-gritworks/Makefile
-gritworks/init.sh.env
