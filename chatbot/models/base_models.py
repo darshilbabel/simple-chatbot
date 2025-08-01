@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.hashers import make_password
 from simple_history.models import HistoricalRecords
-from chatbot.models import LLMProvider, LLMModel, CompanyBotTypeChoices, CompanyBotDynamicContextType, ChatStatus, \
+from chatbot.models import LLMProvider, LLMModel, CompanyBotDynamicContextType, ChatStatus, \
     ProfileType
 
 
@@ -62,8 +62,6 @@ class Bot(models.Model):
         max_length=100, default='/', help_text="Specify the route or API endpoint for interacting with the bot."
     )
 
-    bot_type = models.CharField(max_length=30, choices=CompanyBotTypeChoices.choices,
-                                default=CompanyBotTypeChoices.SIMPLE)
     llm_key = models.CharField(max_length=255, null=True, blank=True)
     dynamic_context = models.TextField(
         null=True, blank=True,

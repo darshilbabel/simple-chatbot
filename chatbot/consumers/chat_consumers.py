@@ -8,7 +8,7 @@ from chatbot.celery_tasks.chat_tasks import get_response, save_in_db
 class ChatConsumer(WebsocketConsumer):
 
     def receive(self, text_data):
-        session_id = self.scope['cookies']['sessionid']
+        session_id = 'daec8wia0ev2jxok9zv3duqkenoyrzjs'
         text_data_json = json.loads(text_data)
         print(text_data_json)
         async_to_sync(self.channel_layer.send)(

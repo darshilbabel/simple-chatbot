@@ -1,17 +1,22 @@
+import os
+
 from asgiref.sync import async_to_sync
 from celery import shared_task
 from channels.layers import get_channel_layer
 from django.contrib.sessions.models import Session
-from chatbot.llm_models.llm_script import handle_openai_model
+from openai import OpenAI
+
 from chatbot.models import LLMModel, Profile
 from chatbot.models import Chat, ChatStatus
 
 channel_layer = get_channel_layer()
-
+client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
 
 @shared_task
 def get_response(channel_name, session_id, input_data):
-    chats = Chat.objects.filter(session=session_id).order_by('created_at')
+    chats = Chat.objects.filter(session=session_id)
+    if len(chats) > 0:
+        chats = chats.order_by('created_at')
     messages = []
     ai_user = Profile.objects.get(id=1)
     messages.append({
@@ -34,8 +39,12 @@ def get_response(channel_name, session_id, input_data):
         'content': input_data['text']
     })
 
-    response = handle_openai_model(messages=messages, max_token=2048, temperature=0.0,
-                                   model_name=LLMModel.GPT3_5_16K, is_json_response=False, stream=True)
+    response = client.chat.completions.create(
+        model=LLMModel.GPT4_O_MINI,
+        messages=messages,
+        stream=True
+    )
+
     completion_text = ''
     for event in response:
         event_text = event.choices[0].delta
@@ -65,9 +74,7 @@ def get_response(channel_name, session_id, input_data):
 
 @shared_task
 def save_in_db(session_id, initiated_by, message, status):
-    session = Session.objects.get(session_key=session_id)
-    session_data = session.get_decoded()
-    uid = session_data.get('_auth_user_id')
+    uid = 2
     if initiated_by == 'AI':
         receiver = Profile.objects.get(id=uid)
         sender = Profile.objects.get(id=1)

@@ -27,14 +27,6 @@ class LLMProvider(models.TextChoices):
     BEDROCK_CONVERSE = 'bedrock/converse', _('BEDROCK_CONVERSE')
     OPENAI = 'openai', _('OPENAI')
 
-
-class CompanyBotTypeChoices(models.TextChoices):
-    SIMPLE = 'SIMPLE', _('SIMPLE')
-    STATE_MACHINE = 'STATE_MACHINE', _('STATE_MACHINE')
-    DATABASE_SIMPLE = 'DATABASE_SIMPLE', _('DATABASE_SIMPLE')
-    INTERVIEW_STATE_MACHINE = 'INTERVIEW_STATE_MACHINE', _('INTERVIEW_STATE_MACHINE')
-
-
 class CompanyBotDynamicContextType(models.TextChoices):
     SQL_QUERY = 'SQL_QUERY', _('SQL_QUERY')
     PYTHON_SCRIPT = 'PYTHON_SCRIPT', _('PYTHON_SCRIPT')
